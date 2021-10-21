@@ -1,0 +1,20 @@
+version: 1.0
+deploy:
+  bootstrap:
+    excludes:
+      - tests
+      - node_modules
+  recurring:
+    excludes:
+      - storage
+      - tests
+      - node_modules
+    remote-commands:
+      - php8.0 artisan migrate --force
+      - php8.0 artisan cache:clear
+      - php8.0 artisan config:clear
+      - php8.0 artisan route:clear
+      - php8.0 artisan view:clear
+      - php8.0 artisan config:cache
+      - php8.0 artisan route:cache
+      - php8.0 artisan view:cache

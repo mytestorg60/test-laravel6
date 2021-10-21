@@ -1,0 +1,73 @@
+name: Deploy Now
+
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  deploy-now:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch project data
+        uses: ionos-deploy-now/retrieve-project-info-action@v1
+        id: project
+        with:
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          project: ${{ secrets.IONOS_PROJECT_ID }}
+          service-host: api-eu.ionos.space
+      - name: checkout
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Setup composer
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: php-actions/composer@v6
+      - name: Setup Node.js v14.x
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Make envfile
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: fmunirdev/envvar-to-dotenv-action@v0.2.0
+        with:
+          target: .env
+          variableNames: APP_NAME,APP_ENV,APP_KEY,APP_DEBUG,APP_URL,LOG_CHANNEL,LOG_LEVEL,DB_CONNECTION,BROADCAST_DRIVER,CACHE_DRIVER,FILESYSTEM_DRIVER,QUEUE_CONNECTION,SESSION_DRIVER,SESSION_LIFETIME,MAIL_MAILER,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,MAIL_ENCRYPTION,MAIL_FROM_ADDRESS,MAIL_FROM_NAME
+        env:
+          APP_DEBUG: true
+          APP_ENV: local
+          APP_KEY: dummy
+          APP_NAME: Laravel
+          APP_URL: ${{ steps.project.outputs.site-url }}
+          BROADCAST_DRIVER: log
+          CACHE_DRIVER: file
+          DB_CONNECTION: sqlite
+          FILESYSTEM_DRIVER: local
+          LOG_CHANNEL: stack
+          LOG_LEVEL: debug
+          MAIL_ENCRYPTION: ${{ secrets.MAIL_ENCRYPTION }}
+          MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
+          MAIL_FROM_NAME: ${APP_NAME}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_MAILER: smtp
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: file
+          SESSION_LIFETIME: 120
+      - name: Do stuff to deploy to ionos
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        run: chmod -R 777 storage/framework; chmod -R 777 storage/logs; php artisan key:generate --force; npm ci; npm run prod; php artisan migrate --force;
+      - name: Deploy build
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: ionos-deploy-now/deploy-to-ionos-action@v1
+        with:
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          branch-id: ${{ steps.project.outputs.branch-id }}
+          dist-folder: ./
+          project: ${{ secrets.IONOS_PROJECT_ID }}
+          remote-host: ${{ steps.project.outputs.remote-host }}
+          service-host: api-eu.ionos.space
+          storage-quota: ${{ steps.project.outputs.storage-quota }}
