@@ -62,7 +62,7 @@ jobs:
         run: chmod -R 777 storage/framework; chmod -R 777 storage/logs; php artisan key:generate --force; npm ci; npm run prod; php artisan migrate --force;
       - name: Deploy build
         if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
-        uses: ionos-deploy-now/deploy-to-ionos-action@docker-image
+        uses: ionos-deploy-now/deploy-to-ionos-action@v1.2.0
         with:
           api-key: ${{ secrets.IONOS_API_KEY }}
           branch-id: ${{ steps.project.outputs.branch-id }}
